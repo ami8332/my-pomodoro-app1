@@ -10,12 +10,12 @@ export const useTimer = () => {
   return context;
 };
 
-// Simple audio management
+// Simple audio management - NO LOOPING
 let currentAlarmAudio = null;
 let currentTickingAudio = null;
 
-// Enhanced notification sound function
-const playNotificationSound = async () => {
+// Brief notification sound function (4-5 seconds to ensure user hears it)
+const playBriefNotificationSound = async () => {
   try {
     // Get sound settings from localStorage
     const savedSounds = localStorage.getItem('timefocus-sound-settings');
@@ -46,22 +46,30 @@ const playNotificationSound = async () => {
         currentAlarmAudio.currentTime = 0;
       }
       
-      // Try to encode URL properly for files with spaces  
       const encodedSoundFile = encodeURI(soundFile);
-      console.log('Playing alarm sound:', soundFile);
-      console.log('Encoded path:', encodedSoundFile);
+      console.log('Playing alarm sound for 5 seconds:', soundFile);
       
       currentAlarmAudio = new Audio(encodedSoundFile);
       currentAlarmAudio.volume = soundSettings.alarmVolume / 100;
+      currentAlarmAudio.loop = true; // Loop to ensure it plays for full 5 seconds
       
       currentAlarmAudio.addEventListener('error', (e) => {
         console.error('Alarm audio error:', e);
-        console.error('Tried to load:', soundFile);
-        console.error('Encoded path was:', encodedSoundFile);
       });
       
+      // Play sound for 5 seconds
       await currentAlarmAudio.play();
-      console.log('🔔 Timer completed! Playing sound:', soundFile);
+      
+      // Stop alarm after 5 seconds maximum
+      setTimeout(() => {
+        if (currentAlarmAudio) {
+          currentAlarmAudio.pause();
+          currentAlarmAudio.currentTime = 0;
+          currentAlarmAudio = null;
+        }
+      }, 5000); // 5 seconds
+      
+      console.log('🔔 Alarm will play for 5 seconds!');
     } else {
       console.log('🔔 Timer completed! (Sound file not found)');
     }
@@ -75,7 +83,7 @@ const playTickingSound = async () => {
   try {
     const savedSounds = localStorage.getItem('timefocus-sound-settings');
     const soundSettings = savedSounds ? JSON.parse(savedSounds) : {
-      tickingSound: 'none',
+      tickingSound: 'classic',
       tickingVolume: 30,
       enabled: true
     };
@@ -84,37 +92,25 @@ const playTickingSound = async () => {
       return;
     }
 
-    // Ticking sound file mapping
+    // Sound file mapping for ticking
     const tickingSounds = {
-      'clock': '/Ticking Sounds/Clock Tick.mp3',
-      'metronome': '/Ticking Sounds/Metronome.mp3',
-      'soft': '/Ticking Sounds/soft-tick.mp3',
-      'calm-storm': '/Ticking Sounds/Calm Storm.mp3',
-      'tick': '/Ticking Sounds/tick.mp3',
-      'tik-tock': '/Ticking Sounds/Tik Tock.mp3'
+      'classic': '/sounds/Ticking Sounds/tick.mp3',
+      'soft': '/sounds/Ticking Sounds/soft-tick.mp3',
+      'mechanical': '/sounds/Ticking Sounds/mechanical.mp3'
     };
 
     const soundFile = tickingSounds[soundSettings.tickingSound];
     if (soundFile) {
-      // Stop any currently playing ticking
-      if (currentTickingAudio) {
-        currentTickingAudio.pause();
-        currentTickingAudio.currentTime = 0;
-      }
+      // Stop any current ticking
+      stopTickingSound();
       
-      // Try to encode URL properly for files with spaces
       const encodedSoundFile = encodeURI(soundFile);
-      console.log('Playing ticking sound:', soundFile);
-      console.log('Encoded path:', encodedSoundFile);
-      
       currentTickingAudio = new Audio(encodedSoundFile);
       currentTickingAudio.volume = soundSettings.tickingVolume / 100;
-      currentTickingAudio.loop = true;
+      currentTickingAudio.loop = true; // Loop ticking sound
       
       currentTickingAudio.addEventListener('error', (e) => {
         console.error('Ticking audio error:', e);
-        console.error('Tried to load:', soundFile);
-        console.error('Encoded path was:', encodedSoundFile);
       });
       
       await currentTickingAudio.play();
@@ -139,17 +135,13 @@ const stopAllSounds = () => {
     currentAlarmAudio.currentTime = 0;
     currentAlarmAudio = null;
   }
-  if (currentTickingAudio) {
-    currentTickingAudio.pause();
-    currentTickingAudio.currentTime = 0;
-    currentTickingAudio = null;
-  }
+  stopTickingSound();
 };
 
 const triggerVibration = () => {
   if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-    // Vibration pattern: [vibrate, pause, vibrate, pause, vibrate]
-    navigator.vibrate([200, 100, 200, 100, 200]);
+    // Brief vibration pattern
+    navigator.vibrate([200, 100, 200]);
   }
 };
 
@@ -194,7 +186,7 @@ const saveSessionToHistory = (mode, duration, startTime) => {
   
   sessionHistory.push(session);
   
-  // Keep only last 100 sessions to avoid storage bloat
+  // Keep only last 100 sessions
   if (sessionHistory.length > 100) {
     sessionHistory.shift();
   }
@@ -210,13 +202,13 @@ const updateUserStats = (type, value = 1) => {
   const savedStats = localStorage.getItem('timefocus-user-stats');
   let stats = savedStats ? JSON.parse(savedStats) : {
     totalSessions: 0,
-    totalFocusTime: 0,
+    focusTime: 0,
+    breakTime: 0,
+    tasksCompleted: 0,
     currentStreak: 0,
     bestStreak: 0,
-    lastSessionDate: null,
-    achievements: [],
-    totalBreakTime: 0,
-    averageSessionLength: 0
+    lastActiveDate: null,
+    createdAt: new Date().toISOString()
   };
 
   switch(type) {
@@ -224,16 +216,14 @@ const updateUserStats = (type, value = 1) => {
       stats.totalSessions += value;
       break;
     case 'focusTime':
-      stats.totalFocusTime += value;
+      stats.focusTime += value;
       break;
     case 'breakTime':
-      stats.totalBreakTime += value;
+      stats.breakTime += value;
       break;
-  }
-
-  // Update average session length
-  if (stats.totalSessions > 0) {
-    stats.averageSessionLength = Math.round(stats.totalFocusTime / stats.totalSessions);
+    case 'taskCompleted':
+      stats.tasksCompleted += value;
+      break;
   }
 
   localStorage.setItem('timefocus-user-stats', JSON.stringify(stats));
@@ -248,20 +238,26 @@ const updateStreak = () => {
   let stats = savedStats ? JSON.parse(savedStats) : {
     currentStreak: 0,
     bestStreak: 0,
-    lastSessionDate: null
+    lastActiveDate: null
   };
 
   const today = new Date().toDateString();
-  const lastSession = stats.lastSessionDate ? new Date(stats.lastSessionDate).toDateString() : null;
-  
-  if (lastSession === today) {
-    // Same day, don't increment streak
+  const lastActiveDate = stats.lastActiveDate ? new Date(stats.lastActiveDate).toDateString() : null;
+
+  if (lastActiveDate === today) {
+    // Already active today, don't change streak
     return;
-  } else if (lastSession === new Date(Date.now() - 86400000).toDateString()) {
-    // Yesterday, increment streak
+  }
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayString = yesterday.toDateString();
+
+  if (lastActiveDate === yesterdayString) {
+    // Continuing streak
     stats.currentStreak += 1;
   } else {
-    // Missed days, reset streak
+    // New streak
     stats.currentStreak = 1;
   }
 
@@ -270,19 +266,20 @@ const updateStreak = () => {
     stats.bestStreak = stats.currentStreak;
   }
 
-  stats.lastSessionDate = new Date().toISOString();
+  stats.lastActiveDate = new Date().toISOString();
   localStorage.setItem('timefocus-user-stats', JSON.stringify(stats));
+  return stats;
 };
 
 export function TimerProvider({ children }) {
   const [mode, setMode] = useState('focus');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
-  const [sessionCompleted, setSessionCompleted] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
-  
+
   const [savedTimes, setSavedTimes] = useState({
     focus: 25 * 60,
     shortBreak: 5 * 60,
@@ -333,13 +330,20 @@ export function TimerProvider({ children }) {
     }
   };
 
+  // Update saved times when settings change
   useEffect(() => {
-    setSavedTimes({
+    const newSavedTimes = {
       focus: settings.focusTime * 60,
       shortBreak: settings.shortBreakTime * 60,
       longBreak: settings.longBreakTime * 60
-    });
-  }, [settings]);
+    };
+    setSavedTimes(newSavedTimes);
+    
+    // Update current timer immediately if not running
+    if (!isRunning) {
+      setTimeLeft(newSavedTimes[mode]);
+    }
+  }, [settings, mode, isRunning]);
 
   useEffect(() => {
     let interval = null;
@@ -378,12 +382,12 @@ export function TimerProvider({ children }) {
       : { enabled: true, sound: true, vibration: true, desktop: true };
     
     if (notificationSettings.enabled) {
-      // Play sound if enabled
+      // Play BRIEF sound if enabled (1-2 seconds only)
       if (settings.soundEnabled && notificationSettings.sound) {
-        await playNotificationSound();
+        await playBriefNotificationSound();
       }
       
-      // Trigger vibration if enabled and available
+      // Trigger brief vibration if enabled and available
       if (notificationSettings.vibration) {
         triggerVibration();
       }
@@ -426,33 +430,35 @@ export function TimerProvider({ children }) {
       
       // Update streak
       updateStreak();
-      
-      const nextMode = (completedSessions + 1) % settings.longBreakInterval === 0 ? 'longBreak' : 'shortBreak';
-      
-      // Auto-start break if enabled
-      if (settings.autoStartBreaks) {
-        setTimeout(() => {
-          changeMode(nextMode);
-          startTimer();
-        }, 3000);
-      }
     } else {
       // Update stats for break sessions
       updateUserStats('breakTime', actualDuration);
-      
-      // Auto-start focus session if enabled
-      if (settings.autoStartPomodoros) {
-        setTimeout(() => {
-          changeMode('focus');
-          startTimer();
-        }, 3000);
-      }
     }
 
-    // Clear session completion after 5 seconds
+    // AUTOMATIC SWITCH after alarm finishes (5 seconds)
+    setTimeout(() => {
+      autoSwitchToNextMode();
+    }, 5000);
+
+    // Clear session completion after 10 seconds
     setTimeout(() => {
       setSessionCompleted(false);
-    }, 5000);
+    }, 10000);
+  };
+
+  // New function for automatic mode switching
+  const autoSwitchToNextMode = () => {
+    // Stop any playing alarm when switching modes
+    stopAllSounds();
+    
+    if (mode === 'focus') {
+      // Determine if it's time for long break based on user settings
+      const nextMode = (completedSessions + 1) % settings.longBreakInterval === 0 ? 'longBreak' : 'shortBreak';
+      changeMode(nextMode);
+    } else {
+      // From any break back to focus
+      changeMode('focus');
+    }
   };
 
   const toggleTimer = async () => {
@@ -489,7 +495,7 @@ export function TimerProvider({ children }) {
 
   const resetTimer = () => {
     setIsRunning(false);
-    stopAllSounds(); // Stop all sounds
+    stopAllSounds();
     setSessionCompleted(false);
     setSessionStartTime(null);
     
@@ -503,7 +509,7 @@ export function TimerProvider({ children }) {
 
   const changeMode = async (newMode) => {
     setIsRunning(false);
-    stopAllSounds(); // Stop all sounds
+    stopAllSounds();
     setMode(newMode);
     setSessionCompleted(false);
     setSessionStartTime(null);
@@ -512,65 +518,52 @@ export function TimerProvider({ children }) {
     setTimeLeft(newTime);
   };
 
+  const skipTimer = () => {
+    // Simply complete the current timer
+    handleTimerComplete();
+  };
+
+  // Apply settings changes immediately
   const updateSettings = (newSettings) => {
-    setSettings(prev => ({
-      ...prev,
+    const updatedSettings = {
+      ...settings,
       ...newSettings
-    }));
+    };
+    
+    setSettings(updatedSettings);
 
-    // Update timer durations if changed
-    const focusChanged = newSettings.focusTime && newSettings.focusTime !== settings.focusTime;
-    const shortBreakChanged = newSettings.shortBreakTime && newSettings.shortBreakTime !== settings.shortBreakTime;
-    const longBreakChanged = newSettings.longBreakTime && newSettings.longBreakTime !== settings.longBreakTime;
-
-    if (focusChanged || shortBreakChanged || longBreakChanged) {
-      const updatedTimes = {
-        focus: (newSettings.focusTime || settings.focusTime) * 60,
-        shortBreak: (newSettings.shortBreakTime || settings.shortBreakTime) * 60,
-        longBreak: (newSettings.longBreakTime || settings.longBreakTime) * 60
-      };
-      
-      setSavedTimes(updatedTimes);
-      
-      // Update current timer if not running
-      if (!isRunning) {
-        setTimeLeft(updatedTimes[mode]);
-      }
+    // Update timer durations immediately
+    const newSavedTimes = {
+      focus: updatedSettings.focusTime * 60,
+      shortBreak: updatedSettings.shortBreakTime * 60,
+      longBreak: updatedSettings.longBreakTime * 60
+    };
+    
+    setSavedTimes(newSavedTimes);
+    
+    // Update current timer immediately if not running
+    if (!isRunning) {
+      setTimeLeft(newSavedTimes[mode]);
     }
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getProgress = () => {
-    const total = getTimerDuration(mode);
-    return ((total - timeLeft) / total) * 100;
-  };
-
-  const value = {
-    mode,
-    timeLeft,
-    isRunning,
-    completedSessions,
-    currentSessionNumber,
-    sessionCompleted,
-    settings,
-    toggleTimer,
-    startTimer,
-    pauseTimer,
-    resetTimer,
-    changeMode,
-    updateSettings,
-    formatTime,
-    getProgress,
-    getTimerDuration
-  };
-
   return (
-    <TimerContext.Provider value={value}>
+    <TimerContext.Provider value={{
+      mode,
+      timeLeft,
+      isRunning,
+      sessionCompleted,
+      completedSessions,
+      currentSessionNumber,
+      settings,
+      toggleTimer,
+      startTimer,
+      pauseTimer,
+      resetTimer,
+      changeMode,
+      skipTimer,
+      updateSettings
+    }}>
       {children}
     </TimerContext.Provider>
   );

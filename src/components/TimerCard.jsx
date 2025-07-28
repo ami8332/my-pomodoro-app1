@@ -12,7 +12,8 @@ export default function TimerCard() {
     resetTimer,
     changeMode,
     currentSessionNumber,
-    sessionCompleted
+    sessionCompleted,
+    settings
   } = useTimer();
 
   const formatTime = (seconds) => {
@@ -24,9 +25,14 @@ export default function TimerCard() {
   const getCurrentMessage = () => {
     if (sessionCompleted) {
       switch(mode) {
-        case 'focus': return 'Session Complete! 🎉 Time for a break!';
+        case 'focus': 
+          // Check if next will be long break
+          const isNextLongBreak = currentSessionNumber % settings.longBreakInterval === 0;
+          return isNextLongBreak 
+            ? 'Session Complete! 🎉 Time for a LONG break!' 
+            : 'Session Complete! 🎉 Time for a break!';
         case 'shortBreak': return 'Break over! ⚡ Ready to focus again?';
-        case 'longBreak': return 'Long break finished! 🌟 Let\'s get productive!';
+        case 'longBreak': return 'Long break finished! 🌟 Ready for productive work!';
         default: return 'Ready to focus! 🎯';
       }
     }
@@ -34,7 +40,7 @@ export default function TimerCard() {
     switch(mode) {
       case 'focus': return isRunning ? 'Stay focused! 🎯' : 'Ready to focus! 🎯';
       case 'shortBreak': return isRunning ? 'Enjoy your break! ☕' : 'Time for a short break! ☕';
-      case 'longBreak': return isRunning ? 'Relax and recharge! 🌟' : 'Long break time! 🌟';
+      case 'longBreak': return isRunning ? 'Relax and recharge! 🌟' : 'Time for a LONG break! 🌟';
       default: return 'Ready to focus! 🎯';
     }
   };
@@ -49,45 +55,100 @@ export default function TimerCard() {
     }
   };
 
+  const getTabStyle = (tabMode) => {
+    const isActive = mode === tabMode;
+    const baseStyle = `px-4 py-2 rounded-md transition-all duration-300 font-medium text-xs`;
+    
+    if (tabMode === 'longBreak') {
+      // Special styling for Long Break to make it more visible
+      return `${baseStyle} ${
+        isActive 
+          ? 'bg-white text-indigo-600 shadow-md ring-2 ring-indigo-300' 
+          : 'text-white/80 hover:text-white hover:bg-white/10 border border-white/30'
+      }`;
+    }
+    
+    if (tabMode === 'focus') {
+      return `${baseStyle} ${
+        isActive 
+          ? 'bg-white text-blue-500 shadow-md' 
+          : 'text-white/80 hover:text-white hover:bg-white/10'
+      }`;
+    }
+    
+    // shortBreak
+    return `${baseStyle} ${
+      isActive 
+        ? 'bg-white text-emerald-500 shadow-md' 
+        : 'text-white/80 hover:text-white hover:bg-white/10'
+    }`;
+  };
+
+  const getCurrentDuration = () => {
+    switch(mode) {
+      case 'focus': return settings.focusTime;
+      case 'shortBreak': return settings.shortBreakTime;
+      case 'longBreak': return settings.longBreakTime;
+      default: return 25;
+    }
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto px-2">
-      {/* Mode Tabs - أصغر */}
+      {/* Mode Tabs */}
       <div className="flex justify-center mb-4">
         <div className="flex bg-white/15 backdrop-blur-lg rounded-lg p-0.5 border border-white/20 shadow-lg">
           <button 
             onClick={() => changeMode('focus')}
-            className={`px-4 py-2 rounded-md transition-all duration-300 font-medium text-xs ${
-              mode === 'focus' 
-                ? 'bg-white text-blue-500 shadow-md' 
-                : 'text-white/80 hover:text-white hover:bg-white/10'
-            }`}
+            className={getTabStyle('focus')}
           >
             🎯 Focus Time
           </button>
           <button 
             onClick={() => changeMode('shortBreak')}
-            className={`px-4 py-2 rounded-md transition-all duration-300 font-medium text-xs ${
-              mode === 'shortBreak' 
-                ? 'bg-white text-emerald-500 shadow-md' 
-                : 'text-white/80 hover:text-white hover:bg-white/10'
-            }`}
+            className={getTabStyle('shortBreak')}
           >
             ☕ Short Break
           </button>
           <button 
             onClick={() => changeMode('longBreak')}
-            className={`px-4 py-2 rounded-md transition-all duration-300 font-medium text-xs ${
-              mode === 'longBreak' 
-                ? 'bg-white text-indigo-500 shadow-md' 
-                : 'text-white/80 hover:text-white hover:bg-white/10'
-            }`}
+            className={getTabStyle('longBreak')}
           >
             🌟 Long Break
           </button>
         </div>
       </div>
 
-      {/* Main Timer Section - مضغوط جداً */}
+      {/* Long Break Indicator */}
+      {mode === 'longBreak' && (
+        <div className="flex justify-center mb-4">
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
+            ✨ Extended Break Time - {settings.longBreakTime} minutes ✨
+          </div>
+        </div>
+      )}
+
+      {/* Session Completion Message */}
+      {sessionCompleted && (
+        <div className="flex justify-center mb-4">
+          <div className={`text-white px-6 py-3 rounded-xl text-center font-medium shadow-lg ${
+            mode === 'focus' 
+              ? (currentSessionNumber % settings.longBreakInterval === 0 
+                  ? 'bg-gradient-to-r from-purple-500 to-indigo-600 animate-bounce' 
+                  : 'bg-gradient-to-r from-yellow-500 to-orange-600 animate-bounce')
+              : 'bg-gradient-to-r from-green-500 to-emerald-600 animate-bounce'
+          }`}>
+            {mode === 'focus' 
+              ? (currentSessionNumber % settings.longBreakInterval === 0 
+                  ? '🎉 Time for your LONG BREAK! You earned it!' 
+                  : '🎉 Great work! Time for a short break!')
+              : '⚡ Break complete! Ready to get back to work?'
+            }
+          </div>
+        </div>
+      )}
+
+      {/* Main Timer Section */}
       <div className="grid lg:grid-cols-2 gap-6 items-center mb-4">
         {/* Left Side - Circular Progress */}
         <div className="flex justify-center lg:justify-end">
@@ -97,8 +158,12 @@ export default function TimerCard() {
             {/* Completion celebration animation */}
             {sessionCompleted && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full animate-ping opacity-75" />
-                <div className="absolute w-6 h-6 bg-yellow-500 rounded-full animate-pulse flex items-center justify-center">
+                <div className={`w-8 h-8 rounded-full animate-ping opacity-75 ${
+                  mode === 'longBreak' ? 'bg-purple-400' : 'bg-yellow-400'
+                }`} />
+                <div className={`absolute w-6 h-6 rounded-full animate-pulse flex items-center justify-center ${
+                  mode === 'longBreak' ? 'bg-purple-500' : 'bg-yellow-500'
+                }`}>
                   <Zap className="w-3 h-3 text-white" />
                 </div>
               </div>
@@ -110,19 +175,26 @@ export default function TimerCard() {
         <div className="text-center lg:text-left space-y-2">
           {/* Session Info */}
           <div className="space-y-1">
-            <h2 className="text-white/90 text-base font-medium">
+            <h2 className={`text-base font-medium ${
+              mode === 'longBreak' ? 'text-purple-200' : 'text-white/90'
+            }`}>
               {getSessionInfo()}
             </h2>
-            <div className={`text-2xl lg:text-3xl font-extralight text-white tracking-wider transition-all duration-300 ${
+            <div className={`text-2xl lg:text-3xl font-extralight tracking-wider transition-all duration-300 ${
               isRunning ? 'animate-pulse' : ''
-            } ${sessionCompleted ? 'text-yellow-400 animate-bounce' : ''}`}>
+            } ${sessionCompleted ? 
+              (mode === 'longBreak' ? 'text-purple-300 animate-bounce' : 'text-yellow-400 animate-bounce') 
+              : (mode === 'longBreak' ? 'text-purple-100' : 'text-white')
+            }`}>
               {formatTime(timeLeft)}
             </div>
           </div>
           
           {/* Status Message */}
           <div className={`text-sm font-medium transition-all duration-500 ${
-            sessionCompleted ? 'text-yellow-400' : 'text-white/80'
+            sessionCompleted ? 
+              (mode === 'longBreak' ? 'text-purple-300' : 'text-yellow-400') 
+              : (mode === 'longBreak' ? 'text-purple-200' : 'text-white/80')
           }`}>
             {getCurrentMessage()}
           </div>
@@ -131,8 +203,12 @@ export default function TimerCard() {
           <div className="flex flex-wrap justify-center lg:justify-start gap-2">
             <button 
               onClick={toggleTimer}
-              className={`bg-white text-blue-500 px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-white/90 transition-all duration-300 flex items-center space-x-2 shadow-lg transform hover:scale-105 ${
+              className={`text-blue-500 px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-white/90 transition-all duration-300 flex items-center space-x-2 shadow-lg transform hover:scale-105 ${
                 isRunning ? 'animate-pulse' : ''
+              } ${
+                mode === 'longBreak' 
+                  ? 'bg-purple-100 hover:bg-purple-200' 
+                  : 'bg-white'
               }`}
             >
               {isRunning ? <Pause size={16} /> : <Play size={16} />}
@@ -141,7 +217,11 @@ export default function TimerCard() {
             
             <button 
               onClick={skipTimer}
-              className="bg-white/20 backdrop-blur-sm text-white px-3 py-2.5 rounded-lg hover:bg-white/30 transition-all duration-300 border border-white/30 transform hover:scale-105 flex items-center space-x-1"
+              className={`backdrop-blur-sm text-white px-3 py-2.5 rounded-lg hover:bg-white/30 transition-all duration-300 border transform hover:scale-105 flex items-center space-x-1 ${
+                mode === 'longBreak' 
+                  ? 'bg-purple-500/20 border-purple-300/30' 
+                  : 'bg-white/20 border-white/30'
+              }`}
               title="Skip current session"
             >
               <SkipForward size={14} />
@@ -150,7 +230,11 @@ export default function TimerCard() {
             
             <button 
               onClick={resetTimer}
-              className="bg-white/20 backdrop-blur-sm text-white px-3 py-2.5 rounded-lg hover:bg-white/30 transition-all duration-300 border border-white/30 transform hover:scale-105 flex items-center space-x-1"
+              className={`backdrop-blur-sm text-white px-3 py-2.5 rounded-lg hover:bg-white/30 transition-all duration-300 border transform hover:scale-105 flex items-center space-x-1 ${
+                mode === 'longBreak' 
+                  ? 'bg-purple-500/20 border-purple-300/30' 
+                  : 'bg-white/20 border-white/30'
+              }`}
               title="Reset current timer"
             >
               <RefreshCw size={14} />
@@ -160,19 +244,25 @@ export default function TimerCard() {
         </div>
       </div>
 
-      {/* Quick Stats Section - مصغرة جداً */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-lg">
+      {/* Quick Stats Section */}
+      <div className={`backdrop-blur-lg rounded-xl p-4 border shadow-lg ${
+        mode === 'longBreak' 
+          ? 'bg-purple-500/10 border-purple-300/20' 
+          : 'bg-white/10 border-white/20'
+      }`}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Session Number */}
           <div className="text-center">
             <div className="text-2xl font-bold text-white mb-1">{currentSessionNumber}</div>
-            <div className="text-white/70 text-xs">Current Session</div>
+            <div className={`text-xs ${mode === 'longBreak' ? 'text-purple-200' : 'text-white/70'}`}>
+              Current Session
+            </div>
             <div className="w-full bg-white/20 rounded-full h-1 mt-1">
               <div 
                 className={`h-full rounded-full transition-all duration-1000 ${
                   mode === 'focus' ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
                   mode === 'shortBreak' ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
-                  'bg-gradient-to-r from-indigo-400 to-indigo-600'
+                  'bg-gradient-to-r from-purple-400 to-purple-600'
                 }`}
                 style={{ width: '100%' }}
               />
@@ -182,45 +272,48 @@ export default function TimerCard() {
           {/* Total Duration */}
           <div className="text-center">
             <div className="text-2xl font-bold text-white mb-1">
-              {mode === 'focus' ? '25' : mode === 'shortBreak' ? '5' : '15'}
+              {getCurrentDuration()}
             </div>
-            <div className="text-white/70 text-xs">Total Minutes</div>
+            <div className={`text-xs ${mode === 'longBreak' ? 'text-purple-200' : 'text-white/70'}`}>
+              Total Minutes
+            </div>
             <div className="flex justify-center mt-1 space-x-0.5">
-              {[...Array(mode === 'focus' ? 5 : mode === 'shortBreak' ? 2 : 3)].map((_, i) => (
-                <div key={i} className="w-1.5 h-1.5 bg-white/40 rounded-full" />
+              {[...Array(mode === 'focus' ? 5 : mode === 'shortBreak' ? 2 : 4)].map((_, i) => (
+                <div key={i} className={`w-1 h-1 rounded-full ${
+                  mode === 'longBreak' ? 'bg-purple-300/60' : 'bg-white/60'
+                }`} />
               ))}
             </div>
           </div>
 
-          {/* Time Remaining */}
+          {/* Time Left */}
           <div className="text-center">
             <div className="text-2xl font-bold text-white mb-1">
-              {Math.ceil(timeLeft / 60)}
+              {Math.floor(timeLeft / 60)}m
             </div>
-            <div className="text-white/70 text-xs">Minutes Left</div>
-            <div className="mt-1">
-              {sessionCompleted ? (
-                <div className="inline-flex items-center px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full text-xs font-medium">
-                  ✅ Complete
-                </div>
-              ) : isRunning ? (
-                <div className="inline-flex items-center px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full text-xs font-medium animate-pulse">
-                  ⏱️ Running
-                </div>
-              ) : (
-                <div className="inline-flex items-center px-2 py-0.5 bg-gray-500/20 text-gray-300 rounded-full text-xs font-medium">
-                  ⏸️ Paused
-                </div>
-              )}
+            <div className={`text-xs ${mode === 'longBreak' ? 'text-purple-200' : 'text-white/70'}`}>
+              Time Left
+            </div>
+            <div className="w-full bg-white/20 rounded-full h-1 mt-1">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  mode === 'focus' ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
+                  mode === 'shortBreak' ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
+                  'bg-gradient-to-r from-purple-400 to-purple-600'
+                }`}
+                style={{ 
+                  width: `${((timeLeft / (getCurrentDuration() * 60)) * 100).toFixed(1)}%` 
+                }}
+              />
             </div>
           </div>
         </div>
 
-        {/* Completion Message */}
-        {sessionCompleted && (
-          <div className="mt-3 text-center">
-            <div className="text-yellow-400 text-xs font-semibold animate-fade-in">
-              🎊 Well done! Your dedication is paying off! 🎊
+        {/* Long Break Info */}
+        {mode === 'longBreak' && (
+          <div className="mt-4 text-center">
+            <div className="text-purple-200 text-sm">
+              🌟 Extended break after {settings.longBreakInterval} focus sessions 🌟
             </div>
           </div>
         )}
