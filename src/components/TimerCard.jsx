@@ -1,4 +1,4 @@
-import { Play, Pause, SkipForward, RefreshCw, Zap } from 'lucide-react';
+import { Play, Pause, SkipForward, RefreshCw, Zap, Clock, ArrowRight } from 'lucide-react';
 import { useTimer } from '@/context/TimerContext';
 import CircularProgress from '@/components/CircularProgress';
 
@@ -13,7 +13,9 @@ export default function TimerCard() {
     changeMode,
     currentSessionNumber,
     sessionCompleted,
-    settings
+    settings,
+    wasRunningBeforeClose,
+    pausedAt
   } = useTimer();
 
   const formatTime = (seconds) => {
@@ -23,6 +25,22 @@ export default function TimerCard() {
   };
 
   const getCurrentMessage = () => {
+    // 🔥 NEW: Show restore message if session was restored
+    if (!isRunning && wasRunningBeforeClose) {
+      return '📖 Session restored! Click START to continue ▶️';
+    }
+    
+    if (!isRunning && pausedAt) {
+      const pausedTime = new Date(pausedAt);
+      const now = new Date();
+      const minutesAgo = Math.floor((now - pausedTime) / (1000 * 60));
+      
+      if (minutesAgo > 0) {
+        return `⏸️ Paused ${minutesAgo} minute${minutesAgo > 1 ? 's' : ''} ago`;
+      }
+      return '⏸️ Paused just now';
+    }
+    
     if (sessionCompleted) {
       switch(mode) {
         case 'focus': 
@@ -121,6 +139,19 @@ export default function TimerCard() {
           : 'bg-white/10 border-white/20'
       }`}>
         
+        {/* 🔥 NEW: Session Restored Banner */}
+        {!isRunning && wasRunningBeforeClose && (
+          <div className="mb-6">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-6 rounded-xl text-center">
+              <div className="flex items-center justify-center space-x-2 text-sm font-medium">
+                <Clock size={16} />
+                <span>Session restored from where you left off!</span>
+                <ArrowRight size={16} />
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Session Completed Banner */}
         {sessionCompleted && (
           <div className="mb-6">
@@ -161,6 +192,15 @@ export default function TimerCard() {
                   </div>
                 </div>
               )}
+              
+              {/* 🔥 NEW: Restored session indicator */}
+              {!isRunning && wasRunningBeforeClose && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-6 h-6 bg-blue-500 rounded-full animate-pulse flex items-center justify-center">
+                    <Clock className="w-3 h-3 text-white" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -187,7 +227,8 @@ export default function TimerCard() {
             <div className={`text-sm font-medium transition-all duration-500 ${
               sessionCompleted ? 
                 (mode === 'longBreak' ? 'text-purple-300' : 'text-yellow-400') 
-                : (mode === 'longBreak' ? 'text-purple-200' : 'text-white/80')
+                : wasRunningBeforeClose ? 'text-blue-300 animate-pulse' :
+                (mode === 'longBreak' ? 'text-purple-200' : 'text-white/80')
             }`}>
               {getCurrentMessage()}
             </div>
@@ -196,16 +237,19 @@ export default function TimerCard() {
             <div className="flex flex-wrap justify-center lg:justify-start gap-2">
               <button 
                 onClick={toggleTimer}
-                className={`text-blue-500 px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-white/90 transition-all duration-300 flex items-center space-x-2 shadow-lg transform hover:scale-105 ${
-                  isRunning ? 'animate-pulse' : ''
+                className={`px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-white/90 transition-all duration-300 flex items-center space-x-2 shadow-lg transform hover:scale-105 ${
+                  isRunning ? 'animate-pulse text-blue-500' : 
+                  wasRunningBeforeClose ? 'text-blue-600 bg-blue-100 animate-pulse' : 'text-blue-500'
                 } ${
                   mode === 'longBreak' 
-                    ? 'bg-purple-100 hover:bg-purple-200' 
-                    : 'bg-white'
+                    ? (wasRunningBeforeClose ? 'bg-blue-100 hover:bg-blue-200' : 'bg-purple-100 hover:bg-purple-200')
+                    : (wasRunningBeforeClose ? 'bg-blue-100' : 'bg-white')
                 }`}
               >
                 {isRunning ? <Pause size={16} /> : <Play size={16} />}
-                <span>{isRunning ? 'PAUSE' : 'START'}</span>
+                <span>
+                  {isRunning ? 'PAUSE' : wasRunningBeforeClose ? 'RESUME' : 'START'}
+                </span>
               </button>
               
               <button 
@@ -279,13 +323,13 @@ export default function TimerCard() {
               </div>
             </div>
 
-            {/* Time Left */}
+            {/* Time Left with Enhanced Status */}
             <div className="text-center">
               <div className="text-2xl font-bold text-white mb-1">
                 {Math.floor(timeLeft / 60)}m
               </div>
               <div className={`text-xs ${mode === 'longBreak' ? 'text-purple-200' : 'text-white/70'}`}>
-                Time Left
+                {isRunning ? 'Time Left' : wasRunningBeforeClose ? 'Restored' : 'Remaining'}
               </div>
               <div className="w-full bg-white/20 rounded-full h-1 mt-1">
                 <div 
@@ -293,7 +337,7 @@ export default function TimerCard() {
                     mode === 'focus' ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
                     mode === 'shortBreak' ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
                     'bg-gradient-to-r from-purple-400 to-purple-600'
-                  }`}
+                  } ${wasRunningBeforeClose ? 'animate-pulse' : ''}`}
                   style={{ 
                     width: `${((timeLeft / (getCurrentDuration() * 60)) * 100).toFixed(1)}%` 
                   }}
@@ -302,6 +346,20 @@ export default function TimerCard() {
             </div>
           </div>
         </div>
+
+        {/* 🔥 NEW: Session restore information */}
+        {!isRunning && (wasRunningBeforeClose || pausedAt) && (
+          <div className="mt-4 text-center">
+            <div className={`text-xs ${mode === 'longBreak' ? 'text-purple-200' : 'text-white/70'}`}>
+              {wasRunningBeforeClose 
+                ? '💾 Your session was automatically saved'
+                : pausedAt 
+                ? `⏸️ Paused on ${new Date(pausedAt).toLocaleTimeString()}`
+                : ''
+              }
+            </div>
+          </div>
+        )}
 
         {/* Long Break Info */}
         {mode === 'longBreak' && (
