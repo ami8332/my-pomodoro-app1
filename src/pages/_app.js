@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
-// Google Analytics ID
+// Google Analytics ID (نفس الرقم)
 const GA_TRACKING_ID = 'G-DN05E92D4E';
 
 // Track page views
@@ -33,7 +33,7 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
-      {/* 🔥 SEO + Google Analytics في مكان واحد */}
+      {/* 🔥 SEO + Google Analytics مع الرابط الجديد الصحيح */}
       <Head>
         {/* Basic Meta Tags */}
         <title>TimeFocus - Free Pomodoro Timer & Task Manager | Focus & Productivity App</title>
@@ -41,21 +41,27 @@ export default function App({ Component, pageProps }) {
         <meta name="keywords" content="pomodoro timer, focus timer, productivity app, task manager, time management, work timer, study timer, free pomodoro" />
         <meta name="author" content="TimeFocus" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="canonical" href="https://my-pomodoro-app1.vercel.app" />
+        
+        {/* 🔥 الرابط الجديد الصحيح */}
+        <link rel="canonical" href="https://my-pomodoro-app11.vercel.app" />
         
         {/* Open Graph Meta Tags (Facebook, LinkedIn) */}
         <meta property="og:title" content="TimeFocus - Free Pomodoro Timer & Task Manager" />
         <meta property="og:description" content="Boost your productivity with our free Pomodoro timer. Manage tasks, track focus time, and stay motivated. No signup required!" />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://my-pomodoro-app1.vercel.app" />
-        <meta property="og:image" content="https://my-pomodoro-app1.vercel.app/og-image.jpg" />
+        
+        {/* 🔥 الرابط الجديد الصحيح */}
+        <meta property="og:url" content="https://my-pomodoro-app11.vercel.app" />
+        <meta property="og:image" content="https://my-pomodoro-app11.vercel.app/og-image.jpg" />
         <meta property="og:site_name" content="TimeFocus" />
         
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="TimeFocus - Free Pomodoro Timer & Task Manager" />
         <meta name="twitter:description" content="Boost your productivity with our free Pomodoro timer. Manage tasks, track focus time, and stay motivated!" />
-        <meta name="twitter:image" content="https://my-pomodoro-app1.vercel.app/og-image.jpg" />
+        
+        {/* 🔥 الرابط الجديد الصحيح */}
+        <meta name="twitter:image" content="https://my-pomodoro-app11.vercel.app/og-image.jpg" />
         
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
@@ -69,14 +75,14 @@ export default function App({ Component, pageProps }) {
         <meta name="revisit-after" content="7 days" />
         <meta name="theme-color" content="#3B82F6" />
         
-        {/* Schema.org structured data */}
+        {/* Schema.org structured data مع الرابط الجديد */}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebApplication",
             "name": "TimeFocus",
             "description": "Free online Pomodoro timer with task management for productivity",
-            "url": "https://my-pomodoro-app1.vercel.app",
+            "url": "https://my-pomodoro-app11.vercel.app",
             "applicationCategory": "ProductivityApplication",
             "operatingSystem": "Web Browser",
             "offers": {
@@ -92,7 +98,7 @@ export default function App({ Component, pageProps }) {
         </script>
       </Head>
 
-      {/* Google Analytics Scripts */}
+      {/* Google Analytics Scripts (نفس الكود، سيعمل مع الرابط الجديد) */}
       <Script
         strategy="afterInteractive"
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
