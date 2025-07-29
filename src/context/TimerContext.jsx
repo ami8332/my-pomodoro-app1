@@ -122,6 +122,7 @@ export function TimerProvider({ children }) {
   const [completedSessions, setCompletedSessions] = useState(0);
   const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
   const [settingsLoaded, setSettingsLoaded] = useState(false); // 🔥 FIX: track settings loading
+  const [isPaused, setIsPaused] = useState(false); // 🔥 NEW: track if timer is paused
   
   const [pausedAt, setPausedAt] = useState(null);
   const [wasRunningBeforeClose, setWasRunningBeforeClose] = useState(false);
@@ -185,6 +186,7 @@ export function TimerProvider({ children }) {
           if (hoursDiff <= 24) {
             setMode(session.mode || 'focus');
             setTimeLeft(session.timeLeft || getTimerDuration(session.mode || 'focus'));
+            setIsPaused(session.isPaused || false); // 🔥 FIX: Restore paused state
             setCompletedSessions(session.completedSessions || 0);
             setCurrentSessionNumber(session.currentSessionNumber || 1);
             setSessionCompleted(session.sessionCompleted || false);
@@ -207,14 +209,14 @@ export function TimerProvider({ children }) {
     }
   }, []);
 
-  // 🔥 FIX: Update timeLeft when settings change (only if not running)
+  // 🔥 FIX: Update timeLeft when settings change (only if timer is fresh, not paused)
   useEffect(() => {
-    if (settingsLoaded && !isRunning && timeLeft !== null) {
+    if (settingsLoaded && !isRunning && !isPaused && timeLeft !== null) {
       const newTime = getTimerDuration(mode);
       setTimeLeft(newTime);
       console.log('⚙️ Settings updated, timer reset to:', settings[mode === 'focus' ? 'focusTime' : mode === 'shortBreak' ? 'shortBreakTime' : 'longBreakTime'], 'minutes');
     }
-  }, [settings, mode, settingsLoaded, isRunning]);
+  }, [settings, mode, settingsLoaded, isRunning, isPaused]);
 
   // Save settings to localStorage whenever settings change
   useEffect(() => {
@@ -231,6 +233,7 @@ export function TimerProvider({ children }) {
       mode,
       timeLeft,
       isRunning,
+      isPaused, // 🔥 FIX: Save paused state
       wasRunningBeforeClose: isRunning,
       pausedAt: isRunning ? null : new Date().toISOString(),
       completedSessions,
@@ -310,7 +313,7 @@ export function TimerProvider({ children }) {
     if (settingsLoaded) {
       saveSessionState();
     }
-  }, [mode, timeLeft, completedSessions, currentSessionNumber, sessionCompleted, isRunning, settingsLoaded]);
+  }, [mode, timeLeft, completedSessions, currentSessionNumber, sessionCompleted, isRunning, isPaused, settingsLoaded]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -437,20 +440,28 @@ export function TimerProvider({ children }) {
 
   const toggleTimer = async () => {
     if (isRunning) {
+      // Pausing timer
       console.log('⏸️ PAUSING timer at:', timeLeft, 'seconds');
       setIsRunning(false);
+      setIsPaused(true); // 🔥 FIX: Mark as paused
       stopTickingSound();
       setPausedAt(new Date().toISOString());
       showToast('⏸️ Timer paused', 'info', 2000);
     } else {
+      // Starting/Resuming timer
       console.log('▶️ STARTING timer from:', timeLeft, 'seconds');
       setIsRunning(true);
+      setIsPaused(false); // 🔥 FIX: No longer paused
       setSessionCompleted(false);
       setPausedAt(null);
       
       if (wasRunningBeforeClose) {
         showToast('▶️ Session resumed!', 'success', 2000);
         setWasRunningBeforeClose(false);
+      } else if (isPaused) {
+        showToast('▶️ Timer resumed!', 'success', 2000);
+      } else {
+        showToast('▶️ Timer started!', 'success', 2000);
       }
       
       if (mode === 'focus') {
@@ -462,6 +473,7 @@ export function TimerProvider({ children }) {
   const resetTimer = () => {
     console.log('🔄 RESETTING timer');
     setIsRunning(false);
+    setIsPaused(false); // 🔥 FIX: Clear paused state
     stopAllSounds();
     setSessionCompleted(false);
     setPausedAt(null);
@@ -478,6 +490,7 @@ export function TimerProvider({ children }) {
     console.log('🔄 Changing mode from', mode, 'to', newMode);
     
     setIsRunning(false);
+    setIsPaused(false); // 🔥 FIX: Clear paused state when changing mode
     stopAllSounds();
     setMode(newMode);
     setSessionCompleted(false);
@@ -503,18 +516,18 @@ export function TimerProvider({ children }) {
     handleTimerComplete();
   };
 
-  // 🔥 FIX: Update settings function - لا يعيد تعيين التايمر إذا كان يعمل
+  // 🔥 FIX: Update settings function - لا يعيد تعيين التايمر إذا كان يعمل أو متوقف مؤقتاً
   const updateSettings = (newSettings) => {
     const updatedSettings = { ...settings, ...newSettings };
     setSettings(updatedSettings);
     
-    // Only reset timer if NOT running
-    if (!isRunning) {
+    // Only reset timer if NOT running AND NOT paused
+    if (!isRunning && !isPaused) {
       const newTime = getTimerDuration(mode);
       setTimeLeft(newTime);
       console.log('⚙️ Settings updated, timer reset to:', newTime / 60, 'minutes');
     } else {
-      console.log('⚙️ Settings updated, but timer is running - no reset');
+      console.log('⚙️ Settings updated, but timer is running/paused - no reset');
     }
     
     showToast('⚙️ Settings saved', 'success', 2000);
@@ -563,6 +576,7 @@ export function TimerProvider({ children }) {
         mode: 'focus',
         timeLeft: 0,
         isRunning: false,
+        isPaused: false, // 🔥 FIX: Include in loading state
         sessionCompleted: false,
         completedSessions: 0,
         currentSessionNumber: 1,
@@ -586,6 +600,7 @@ export function TimerProvider({ children }) {
       mode,
       timeLeft,
       isRunning,
+      isPaused, // 🔥 FIX: Expose paused state
       sessionCompleted,
       completedSessions,
       currentSessionNumber,
