@@ -41,21 +41,21 @@ export default function App({ Component, pageProps }) {
         <meta name="keywords" content="pomodoro timer, focus timer, productivity app, task manager, time management, work timer, study timer, free pomodoro" />
         <meta name="author" content="TimeFocus" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="canonical" href="https://your-domain.vercel.app" />
+        <link rel="canonical" href="https://my-pomodoro-app1.vercel.app" />
         
         {/* Open Graph Meta Tags (Facebook, LinkedIn) */}
         <meta property="og:title" content="TimeFocus - Free Pomodoro Timer & Task Manager" />
         <meta property="og:description" content="Boost your productivity with our free Pomodoro timer. Manage tasks, track focus time, and stay motivated. No signup required!" />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://your-domain.vercel.app" />
-        <meta property="og:image" content="https://your-domain.vercel.app/og-image.jpg" />
+        <meta property="og:url" content="https://my-pomodoro-app1.vercel.app" />
+        <meta property="og:image" content="https://my-pomodoro-app1.vercel.app/og-image.jpg" />
         <meta property="og:site_name" content="TimeFocus" />
         
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="TimeFocus - Free Pomodoro Timer & Task Manager" />
         <meta name="twitter:description" content="Boost your productivity with our free Pomodoro timer. Manage tasks, track focus time, and stay motivated!" />
-        <meta name="twitter:image" content="https://your-domain.vercel.app/og-image.jpg" />
+        <meta name="twitter:image" content="https://my-pomodoro-app1.vercel.app/og-image.jpg" />
         
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
@@ -76,7 +76,7 @@ export default function App({ Component, pageProps }) {
             "@type": "WebApplication",
             "name": "TimeFocus",
             "description": "Free online Pomodoro timer with task management for productivity",
-            "url": "https://your-domain.vercel.app",
+            "url": "https://my-pomodoro-app1.vercel.app",
             "applicationCategory": "ProductivityApplication",
             "operatingSystem": "Web Browser",
             "offers": {
